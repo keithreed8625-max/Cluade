@@ -1,6 +1,7 @@
-"""The HTTP endpoint an iPhone Shortcut posts to.
+"""The endpoint the phone sends to.
 
-Run it on the PC; point a Shortcut at http://<pc-lan-ip>:8765/ with the token.
+Run it on the PC. The phone can either open the page in Safari and pick photos,
+or POST from a Shortcut — both hit the same /upload route.
 
 Scope note: this listens on your local network in the clear. It is built for a
 home LAN — a shared token, size limits, and an inbox that writes cannot escape.
@@ -14,9 +15,10 @@ import secrets
 from pathlib import Path
 from typing import Annotated, Any, Optional
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse
 
+from .page import help_page, upload_page
 from .store import Inbox, constant_time_match
 
 # Refuse anything larger; a 4K video would otherwise sit entirely in memory.
@@ -42,14 +44,24 @@ def create_app(inbox_dir: Path, token: str) -> FastAPI:
         if not constant_time_match(supplied, token):
             raise HTTPException(status_code=401, detail="Bad or missing token.")
 
-    @app.get("/")
+    @app.get("/", response_class=HTMLResponse)
+    async def home(t: Annotated[Optional[str], Query()] = None) -> HTMLResponse:
+        """The page the phone opens in Safari.
+
+        The token rides in the query string so that bookmarking the link — or
+        adding it to the home screen — carries the credential with it.
+        """
+        if constant_time_match(t, token):
+            return HTMLResponse(upload_page(token))
+        return HTMLResponse(help_page(), status_code=401)
+
+    @app.get("/status")
     async def status() -> dict[str, Any]:
-        """Lets you confirm from the phone's browser that the PC is reachable."""
+        """Machine-readable health check."""
         return {
             "service": "iphone-tk bridge",
             "inbox": str(inbox.root),
             "items": len(inbox.list_items()),
-            "hint": "POST /text or /upload with X-Token",
         }
 
     @app.post("/text")
@@ -106,3 +118,23 @@ def serve(inbox_dir: Path, token: str, host: str = "0.0.0.0", port: int = 8765) 
     import asyncio
 
     asyncio.run(serve_async(inbox_dir, token, host=host, port=port))
+
+
+def detect_lan_ip() -> Optional[str]:
+    """Find the address the phone should use to reach this PC.
+
+    Opens a UDP socket toward a public address and reads back which local
+    interface the OS picked. No packet is actually sent, and it needs no
+    internet connection — it only consults the routing table.
+    """
+    import socket
+
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        probe.connect(("8.8.8.8", 80))
+        address: str = probe.getsockname()[0]
+        return address if not address.startswith("127.") else None
+    except OSError:
+        return None
+    finally:
+        probe.close()

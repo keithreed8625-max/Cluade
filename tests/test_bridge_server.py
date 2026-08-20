@@ -16,9 +16,40 @@ def client(tmp_path: Path) -> TestClient:
 
 
 def test_status_endpoint_reports_the_inbox(client: TestClient) -> None:
-    response = client.get("/")
+    response = client.get("/status")
     assert response.status_code == 200
     assert response.json()["service"] == "iphone-tk bridge"
+
+
+def test_home_without_a_token_does_not_expose_the_uploader(client: TestClient) -> None:
+    response = client.get("/")
+    assert response.status_code == 401
+    assert "Almost there" in response.text
+    assert TOKEN not in response.text
+
+
+def test_home_with_a_wrong_token_is_refused(client: TestClient) -> None:
+    response = client.get("/", params={"t": "wrong"})
+    assert response.status_code == 401
+    assert TOKEN not in response.text
+
+
+def test_home_with_the_token_serves_the_uploader(client: TestClient) -> None:
+    response = client.get("/", params={"t": TOKEN})
+    assert response.status_code == 200
+    assert "Send to PC" in response.text
+    # The page posts on the phone's behalf, so it must carry the token.
+    assert TOKEN in response.text
+
+
+def test_uploader_page_escapes_the_token_into_the_attribute(tmp_path: Path) -> None:
+    from iphone_tk.bridge.server import create_app as build
+
+    nasty = 'a"><script>x</script>'
+    client = TestClient(build(tmp_path / "inbox", nasty))
+    response = client.get("/", params={"t": nasty})
+    assert response.status_code == 200
+    assert "<script>x</script>" not in response.text
 
 
 def test_text_requires_a_token(client: TestClient) -> None:
