@@ -1,0 +1,24 @@
+[project]
+name = "iphone-tk"
+version = "0.1.0"
+description = "Read from, receive from, and automate an iPhone from a Windows PC over USB."
+requires-python = ">=3.10"
+dependencies = [
+    "pymobiledevice3>=10.10,<11",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
+]
+
+[project.scripts]
+iphone-tk = "iphone_tk.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["iphone_tk*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

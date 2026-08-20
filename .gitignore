@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Runtime output — device data must never be committed
+inbox/
+pulled/
+backups/
+*.png
+*.ips
+*.mobilebackup
+.bridge-token
