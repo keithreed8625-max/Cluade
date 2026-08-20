@@ -1,0 +1,76 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    # Windows is the platform this tool targets, so it is tested first-class
+    # rather than as an afterthought. Linux is kept as the fast canary.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        python: ["3.11", "3.13"]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install test dependencies
+        # Deliberately not the full package. The test suite covers the bridge,
+        # which needs only the web stack; pulling in pymobiledevice3 and its
+        # native dependencies here would make every run slower and give the
+        # matrix a way to fail for reasons unrelated to the code under test.
+        # Full-install correctness is covered by the `install` job below.
+        run: python -m pip install --upgrade pip fastapi python-multipart httpx pytest
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+  install:
+    # Proves the package metadata is correct and the console script works.
+    # Linux only: pymobiledevice3 pulls native wheels whose Windows
+    # availability varies, and that is a dependency issue rather than ours.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install the package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Verify the CLI is wired up
+        run: |
+          iphone-tk --version
+          iphone-tk --help
+
+      - name: Verify it fails helpfully with no device attached
+        # There is no iPhone on a CI runner, so the tool must exit 2 with
+        # advice rather than dumping a traceback. This is the path every new
+        # user hits first when something is wrong, so it is worth guarding.
+        run: |
+          set +e
+          output=$(iphone-tk devices 2>&1)
+          code=$?
+          set -e
+          echo "$output"
+          test $code -eq 2 || { echo "expected exit 2, got $code"; exit 1; }
+          echo "$output" | grep -q "Trust This Computer" || {
+            echo "error message lost its guidance"; exit 1; }

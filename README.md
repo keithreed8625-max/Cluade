@@ -18,7 +18,7 @@ speaks the same protocols Finder and Xcode use.
 | Launch/kill apps, list processes | Yes | Needs Developer Mode |
 | Spoof GPS location | Yes | Needs Developer Mode |
 | Reboot / shut down | Yes | USB, nothing to enable |
-| Phone sends files/text to the PC | Yes | Wi-Fi, via Shortcuts |
+| Phone sends photos/files to the PC | Yes | Wi-Fi, via a web page or Shortcut |
 | **Tap, swipe, type on the screen** | **No** | Needs WebDriverAgent, which only builds and signs on a Mac |
 | **Read Messages/Photos live from a running phone** | **No** | Apple sandboxes them; take a backup instead |
 | **Anything wirelessly without setup** | **No** | USB, or the Shortcuts bridge |
@@ -90,12 +90,14 @@ iphone-tk bridge --inbox C:\inbox          # receive from the phone
 
 Add `--udid <id>` when more than one phone is plugged in.
 
-### Receiving from the phone
+### Receiving photos from the phone
 
-`iphone-tk bridge` starts a small server on the PC and prints a token. A
-Shortcut on the phone POSTs files or text to it, and they land in the inbox
-folder. Step-by-step, including building the Shortcut:
-**[docs/shortcuts.md](docs/shortcuts.md)**.
+Double-click **`start-bridge.bat`** (or run `iphone-tk bridge`). It prints a
+link; open it in Safari on the phone and add it to the home screen. After that,
+sending photos is: tap icon, choose, send.
+
+Nothing needs installing on the phone, and no Shortcut is required. Full
+walkthrough: **[docs/send-photos.md](docs/send-photos.md)**.
 
 The bridge is built for a home LAN: a shared token, a size cap, and an inbox
 that uploads cannot escape. It has no TLS and no per-client identity, so do not
