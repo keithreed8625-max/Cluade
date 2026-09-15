@@ -11,7 +11,6 @@ identity, so anyone who learns the token can write files into the inbox.
 
 from __future__ import annotations
 
-import secrets
 from pathlib import Path
 from typing import Annotated, Any, Optional
 
@@ -23,11 +22,6 @@ from .store import Inbox, constant_time_match
 
 # Refuse anything larger; a 4K video would otherwise sit entirely in memory.
 MAX_UPLOAD_BYTES = 256 * 1024 * 1024
-
-
-def generate_token() -> str:
-    """Make a token short enough to retype into Shortcuts, long enough to matter."""
-    return secrets.token_urlsafe(18)
 
 
 def create_app(inbox_dir: Path, token: str) -> FastAPI:

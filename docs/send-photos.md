@@ -68,7 +68,12 @@ Now: Photos → Share → your shortcut.
 - Windows Firewall: Windows Security → Firewall → Allow an app.
 
 **"Almost there" page**
-Your link is missing the `?t=...` part. Copy the whole line from the terminal.
+Your link is missing the `?t=...` part, or carries a token that is no longer
+current. Copy the whole line from the terminal and re-add it.
+
+The token is saved between runs, so a working icon stays working. It only
+changes if you pass `--new-token`, or if the saved token file is deleted.
+Startup prints which of the two happened.
 
 **The PC's address changed**
 Home routers hand out new addresses periodically. Restart the bridge; it prints
@@ -81,6 +86,10 @@ the current one.
 It only works on your own Wi-Fi — nothing is exposed to the internet, and no
 photo passes through anyone else's server. The `?t=` token stops other devices
 on your network from uploading.
+
+That token is kept in a file readable only by your Windows account
+(`%LOCALAPPDATA%\iphone-tk\bridge-token`), not in the photo folder. Delete it,
+or run with `--new-token`, and every saved link stops working.
 
 It is plain HTTP on your LAN, so use it on a network you control. Do not set up
 port forwarding for it.

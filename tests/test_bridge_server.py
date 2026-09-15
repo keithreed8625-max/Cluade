@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from iphone_tk.bridge.server import create_app
+from iphone_tk.bridge.token import resolve_token
 
 TOKEN = "test-token-value"
 
@@ -102,3 +103,29 @@ def test_oversized_upload_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyP
         headers={"X-Token": TOKEN},
     )
     assert response.status_code == 413
+
+
+def test_a_saved_link_still_opens_after_a_restart(tmp_path: Path) -> None:
+    """The regression this whole token file exists for.
+
+    Before the token was persisted, every start minted a new one, so the link
+    the phone saved to its home screen authenticated exactly once and then fell
+    back to the help page forever.
+    """
+    token_file = tmp_path / "bridge-token"
+
+    # First start: the user adds the printed link to the home screen.
+    first_token, _ = resolve_token(path=token_file)
+    saved_link = f"/?t={first_token}"
+    first_run = TestClient(create_app(tmp_path / "inbox", first_token))
+    assert first_run.get(saved_link).status_code == 200
+
+    # Second start, fresh process, same saved link.
+    second_token, _ = resolve_token(path=token_file)
+    second_run = TestClient(create_app(tmp_path / "inbox", second_token))
+    assert second_run.get(saved_link).status_code == 200
+
+    # Rotating on purpose must still invalidate it.
+    rotated_token, _ = resolve_token(path=token_file, rotate=True)
+    rotated_run = TestClient(create_app(tmp_path / "inbox", rotated_token))
+    assert rotated_run.get(saved_link).status_code == 401
