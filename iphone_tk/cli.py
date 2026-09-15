@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 from . import __version__, control, read
-from .bridge.server import detect_lan_ip, generate_token, serve_async
+from .bridge.server import detect_lan_ip, serve_async
+from .bridge.token import resolve_token
 from .connect import automation_provider, connect, list_devices, summarize
 from .errors import IphoneTkError
 
@@ -76,7 +77,20 @@ def build_parser() -> argparse.ArgumentParser:
     bridge.add_argument("--inbox", type=Path, default=Path("inbox"), help="Where uploads land.")
     bridge.add_argument("--port", type=int, default=8765)
     bridge.add_argument("--host", default="0.0.0.0", help="0.0.0.0 exposes it to your LAN.")
-    bridge.add_argument("--token", help="Shared secret. Generated and printed if omitted.")
+    bridge.add_argument(
+        "--token",
+        help="Shared secret. Omit to reuse the one remembered from last time.",
+    )
+    bridge.add_argument(
+        "--token-file",
+        type=Path,
+        help="Where the remembered token is kept (default: your user config folder).",
+    )
+    bridge.add_argument(
+        "--new-token",
+        action="store_true",
+        help="Mint a fresh token. Saved home-screen links stop working.",
+    )
 
     return parser
 
@@ -95,7 +109,9 @@ async def run(args: argparse.Namespace) -> int:
 
     if command == "bridge":
         # Runs without a device: the phone reaches in over the network instead.
-        token = args.token or generate_token()
+        token, token_note = resolve_token(
+            args.token, args.token_file, rotate=args.new_token
+        )
         address = detect_lan_ip()
         host_part = address or "<your-pc-ip>"
         link = f"http://{host_part}:{args.port}/?t={token}"
@@ -111,6 +127,8 @@ async def run(args: argparse.Namespace) -> int:
             print()
         print("  Then tap Share -> Add to Home Screen to keep it one tap away.")
         print(f"  Photos land in: {Path(args.inbox).resolve()}")
+        print()
+        print(token_note)
         print()
         print("  Both devices must be on the same Wi-Fi. Ctrl-C to stop.")
         print()

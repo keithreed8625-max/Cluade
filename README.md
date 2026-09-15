@@ -86,6 +86,7 @@ iphone-tk set-location 51.5007 -0.1246     # [dev] Big Ben
 iphone-tk clear-location                   # [dev] back to real GPS
 
 iphone-tk bridge --inbox C:\inbox          # receive from the phone
+iphone-tk bridge --new-token               # rotate the shared token
 ```
 
 Add `--udid <id>` when more than one phone is plugged in.
@@ -95,6 +96,11 @@ Add `--udid <id>` when more than one phone is plugged in.
 Double-click **`start-bridge.bat`** (or run `iphone-tk bridge`). It prints a
 link; open it in Safari on the phone and add it to the home screen. After that,
 sending photos is: tap icon, choose, send.
+
+The link carries a token, and that token is remembered between runs — so the
+home-screen icon keeps working after a restart or a reboot. Startup says which
+token it is using. To invalidate every saved link, run `iphone-tk bridge
+--new-token` and add the new one.
 
 Nothing needs installing on the phone, and no Shortcut is required. Full
 walkthrough: **[docs/send-photos.md](docs/send-photos.md)**.
